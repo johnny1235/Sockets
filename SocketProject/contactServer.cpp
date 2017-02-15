@@ -1,16 +1,33 @@
 #include <vector>
 #include <utility>      // std::pair
 #include <iostream>
+#include <fstream>
 #include <string>
 #include <tuple>
 #include <typeinfo>
 #include <algorithm> 
+#include <exception>
+#include <stdio.h>      /* for printf() and fprintf() */
+#include <sys/socket.h> /* for socket() and bind() */
+#include <arpa/inet.h>  /* for sockaddr_in and inet_ntoa() */
+#include <stdlib.h>     /* for atoi() and exit() */
+#include <string.h>     /* for memset() */
+#include <unistd.h>     /* for close() */
+#include <sstream>
+#define ECHOMAX 255     /* Longest string to echo */
 
 using namespace std;
 typedef tuple<string,string,int> contact;
 typedef vector< pair< string,vector<contact> > > list;
 
 // Functions
+
+
+void DieWithError(const char *errorMessage) /* External error handling function */
+{
+    perror(errorMessage);
+    exit(1);
+}
 
 //query lists
 pair<int, vector<string> > query_lists(list allContacts) 
@@ -111,6 +128,7 @@ pair<int, vector<contact> > im(list contactList, string contactListName, string 
 					break;
 				}
 			}
+			return make_pair(0, hostContacts);		
 
 		}
 	}
@@ -130,7 +148,7 @@ int join(list& contactList, string listName, string hostName, string ip, int por
 			{
 				if(hostName == get<0>(*it2))
 				{
-					cout << "FAILURE" << endl;
+					cout << "FAILURE" << endl;// FAILURE
 					return 0;
 				}
 			}
@@ -144,12 +162,128 @@ int join(list& contactList, string listName, string hostName, string ip, int por
 	return 0;
 
 } 
-int main()
-{
-	list contactList;
-	vector<contact> bobs;
 
-	/* ----------- Testing ---------------- */
+int saveFile(list contactList, string Filename)
+{
+	ofstream myFile;
+	try
+	{
+		myFile.open(Filename+".txt");
+		myFile<< "Number of contact lists: " << contactList.size() << endl << endl;
+		for(list::iterator it = contactList.begin(); it !=contactList.end(); it++)
+		{
+			myFile<< "Contact list: " << it->first << " | Number of contacts: " << it->second.size() << endl;
+			for(vector<contact>::iterator it2 = it->second.begin(); it2 !=it->second.end(); it2++)
+			{
+			
+				myFile<< "(" << get<0>(*it2) << ", " << get<1>(*it2) << ", " << get<2>(*it2) << ")" << endl;
+			
+			}
+			myFile << endl;
+		}
+	
+		myFile.close();
+		return 1;
+	}
+
+	catch(const char* e)
+	{
+		return 0;
+	}
+}
+int main(int argc, char *argv[])
+{
+	    list contactList;
+	    int sock;                        /* Socket */
+	    struct sockaddr_in echoServAddr; /* Local address */
+	    struct sockaddr_in echoClntAddr; /* Client address */
+	    unsigned int cliAddrLen;         /* Length of incoming message */
+	    //string echoBuffer;
+	    char echoBuffer[ECHOMAX];        /* Buffer for echo string */
+	    unsigned short echoServPort;     /* Server port */
+	    int recvMsgSize;                 /* Size of received message */
+	    string token;
+	    string str(echoBuffer);  // splitting
+
+	    if (argc != 2)         /* Test for correct number of parameters */
+	    {
+		fprintf(stderr,"Usage:  %s <UDP SERVER PORT>\n", argv[0]);
+		exit(1);
+	    }
+
+	    echoServPort = atoi(argv[1]);  /* First arg:  local port */
+
+	    /* Create socket for sending/receiving datagrams */
+	    if ((sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0)
+		DieWithError("socket() failed");
+
+	    /* Construct local address structure */
+	    memset(&echoServAddr, 0, sizeof(echoServAddr));   /* Zero out structure */
+	    echoServAddr.sin_family = AF_INET;                /* Internet address family */
+	    echoServAddr.sin_addr.s_addr = htonl(INADDR_ANY); /* Any incoming interface */
+	    echoServAddr.sin_port = htons(echoServPort);      /* Local port */
+
+	    /* Bind to the local address */
+	    if (bind(sock, (struct sockaddr *) &echoServAddr, sizeof(echoServAddr)) < 0)
+		DieWithError("bind() failed");
+	  
+	    for (;;) /* Run forever */
+	    {
+		/* Set the size of the in-out parameter */
+		cliAddrLen = sizeof(echoClntAddr);
+
+		/* Block until receive message from a client */
+		if ((recvMsgSize = recvfrom(sock, echoBuffer, ECHOMAX, 0,
+		    (struct sockaddr *) &echoClntAddr, &cliAddrLen)) < 0)
+		    DieWithError("recvfrom() failed");
+
+		printf("Handling client %s\n", inet_ntoa(echoClntAddr.sin_addr));
+
+		// parsing the message from client
+		vector<string> tokenVector;
+		cout << echoBuffer << endl;
+		istringstream iss(echoBuffer);
+		while(getline(iss, token, '-'))
+		{
+			tokenVector.push_back(token);
+		}
+		
+		// printVector(tokenVector); Test
+		int tokenInt = stoi(tokenVector.at(0),nullptr,10);
+		switch(tokenInt)
+		{
+			case 1: // query list
+				{
+				pair<int, vector<string> > toReturn = query_lists(contactList);
+				cout << toReturn.first << endl;
+				printVector(toReturn.second);
+				break;
+				}
+			case 2: // register contact-list-name
+			
+				break;
+	 		case 3: // join contact-list-name contact-name ip port
+				break;
+			case 4: // leave contact-list-name contact-name
+				break;
+			case 5: // im contact-list-name contact-name
+				break;
+			case 6: // save file-name
+				break;
+		}
+		sendto(sock, echoBuffer, recvMsgSize, 0, 
+		     (struct sockaddr *) &echoClntAddr, sizeof(echoClntAddr));
+
+		/* Send received datagram back to the client */
+		if (sendto(sock, echoBuffer, recvMsgSize, 0, 
+		     (struct sockaddr *) &echoClntAddr, sizeof(echoClntAddr)) != recvMsgSize)
+		    DieWithError("sendto() sent a different number of bytes than expected");
+	    }
+
+	//vector<contact> bobs;
+
+/*
+
 	// creating contact lists
 	contactList.push_back(make_pair("bob", bobs));
 	contactList.push_back(make_pair("alice", bobs));
@@ -167,13 +301,16 @@ int main()
 	// testing join function
 	join(contactList, "bob", "kevin", "10", 15);
 	join(contactList, "bob", "k", "101", 115);
-	join(contactList, "bob", "evin", "109", 1445);
-	join(contactList, "bob", "vin", "180", 1885);
+	join(contactList, "alice", "evin", "109", 1445);
+	join(contactList, "newTest", "vin", "180", 1885);
 	
 
-	auto toReturn2 = im(contactList, "bob", "kevin");
+	auto toReturn2 = im(contactList, "bob", "john");
 	cout << toReturn2.first << endl;
 	printVectorTuple(toReturn2.second);
 	//cout << 'Hello World!\n';
+
+	saveFile(contactList, "test");
+*/
 	return 0;
 }
