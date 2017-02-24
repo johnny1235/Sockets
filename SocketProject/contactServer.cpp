@@ -194,6 +194,11 @@ int saveFile(list contactList, string Filename)
 int main(int argc, char *argv[])
 {
 	    list contactList;
+	    // Test Data
+	    vector<contact> bobs;
+	    contactList.push_back(make_pair("bob", bobs));
+	    contactList.push_back(make_pair("alice", bobs));
+	
 	    int sock;                        /* Socket */
 	    struct sockaddr_in echoServAddr; /* Local address */
 	    struct sockaddr_in echoClntAddr; /* Client address */
@@ -255,8 +260,8 @@ int main(int argc, char *argv[])
 			case 1: // query list
 				{
 				pair<int, vector<string> > toReturn = query_lists(contactList);
-				cout << toReturn.first << endl;
-				printVector(toReturn.second);
+				//cout << toReturn.first << endl;
+				//printVector(toReturn.second);
 				break;
 				}
 			case 2: // register contact-list-name
@@ -271,9 +276,15 @@ int main(int argc, char *argv[])
 			case 6: // save file-name
 				break;
 		}
+/// 		Test to Send Hello world to Client
+		boss = "Hello World";
+		const void * a = boss.c_str();
+		sendto(sock, a, 255, 0, 
+		     (struct sockaddr *) &echoClntAddr, sizeof(echoClntAddr));
+///             END TEST
 		sendto(sock, echoBuffer, recvMsgSize, 0, 
 		     (struct sockaddr *) &echoClntAddr, sizeof(echoClntAddr));
-
+/*
 		/* Send received datagram back to the client */
 		if (sendto(sock, echoBuffer, recvMsgSize, 0, 
 		     (struct sockaddr *) &echoClntAddr, sizeof(echoClntAddr)) != recvMsgSize)

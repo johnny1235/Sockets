@@ -59,11 +59,14 @@ int main(int argc, char *argv[])
         DieWithError("sendto() sent a different number of bytes than expected");
   
     /* Recv a response */
+/// **********************     edit recieve from server
     fromSize = sizeof(fromAddr);
-    if ((respStringLen = recvfrom(sock, echoBuffer, ECHOMAX, 0, 
-         (struct sockaddr *) &fromAddr, &fromSize)) != echoStringLen)
-        DieWithError("recvfrom() failed");
+//    if ((respStringLen = recvfrom(sock, echoBuffer, ECHOMAX, 0, 
+//         (struct sockaddr *) &fromAddr, &fromSize)) != echoStringLen)
+//        DieWithError("recvfrom() failed");
+respStringLen = recvfrom(sock, echoBuffer, ECHOMAX, 0, (struct sockaddr *) &fromAddr, &fromSize);
 
+// ************************     End Edit
     if (echoServAddr.sin_addr.s_addr != fromAddr.sin_addr.s_addr)
     {
         fprintf(stderr,"Error: received a packet from unknown source.\n");
