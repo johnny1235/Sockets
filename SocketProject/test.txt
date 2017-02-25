@@ -1,0 +1,9 @@
+Number of contact lists: 3
+
+Contact list: bob | Number of contacts: 0
+
+Contact list: alice | Number of contacts: 0
+
+Contact list: jo | Number of contacts: 1
+(bob, 1965.51.555, 55)
+

@@ -4,8 +4,8 @@
 #include <stdlib.h>     /* for atoi() and exit() */
 #include <string.h>     /* for memset() */
 #include <unistd.h>     /* for close() */
-
-#define ECHOMAX 255     /* Longest string to echo */
+#define ECHOMAX 800     /* Longest string to echo */
+//#define ECHOMAX 255     /* Longest string to echo */
 
 void DieWithError(const char *errorMessage) /* External error handling function */
 {
@@ -29,6 +29,7 @@ int main(int argc, char *argv[])
     if ((argc < 3) || (argc > 4))    /* Test for correct number of arguments */
     {
         fprintf(stderr,"Usage: %s <Server IP> <Echo Word> [<Echo Port>]\n", argv[0]);
+	printf("<Echo Word>\n 1 = Query List, 2 = Register, 3 = join, 4 = leave, 5 = im , 6 = save \n inputs for Echo Word:(- is out delimiter) \n 1\n 2-contact list name\n 3-contact list name-contact name-IP-address port\n 4-contact list name-contact name \n 5-contact list name-contact name\n");
         exit(1);
     }
 
@@ -57,26 +58,52 @@ int main(int argc, char *argv[])
     if (sendto(sock, echoString, echoStringLen, 0, (struct sockaddr *)
                &echoServAddr, sizeof(echoServAddr)) != echoStringLen)
         DieWithError("sendto() sent a different number of bytes than expected");
-  
-    /* Recv a response */
-/// **********************     edit recieve from server
-    fromSize = sizeof(fromAddr);
-//    if ((respStringLen = recvfrom(sock, echoBuffer, ECHOMAX, 0, 
-//         (struct sockaddr *) &fromAddr, &fromSize)) != echoStringLen)
-//        DieWithError("recvfrom() failed");
-respStringLen = recvfrom(sock, echoBuffer, ECHOMAX, 0, (struct sockaddr *) &fromAddr, &fromSize);
 
-// ************************     End Edit
+/////////    /* Recv a response */     ///////
+    // echoString -- Sent message
+    // echobuffer -- recevied message
+    fromSize = sizeof(fromAddr);
+    respStringLen = recvfrom(sock, echoBuffer, ECHOMAX, 0, (struct sockaddr *) &fromAddr, &fromSize);   // edited to receive buffer -- Echomax set to bigger number
+    echoBuffer[respStringLen] = '\0';       /* null-terminate the received data */
+    printf("Recieved: %s\n", echoBuffer);
+
+    //printf("echostring: %s\n", echoString);    //Test
+
+//////////// End recieve message response ////////
+
+
+
+
+// May need switch statment based on our first input from client???
+/*  
+    int tokenInt = atoi(echoString);  // capture the 1st argument (the function to call)
+    printf("tokenInt: %d\n", tokenInt);   // test TokenInt
+    switch(tokenInt)
+	{
+		case 1: // query list
+		{
+			respStringLen = recvfrom(sock, echoBuffer, ECHOMAX, 0, (struct sockaddr *) &fromAddr, &fromSize);
+   			echoBuffer[respStringLen] = '\0';
+			printf("Size of Contact List: %s\n", echoBuffer);   
+			break;
+		}
+		case 2: // register contact-list-name
+			break;
+	 	case 3: // join contact-list-name contact-name ip port
+			break;
+		case 4: // leave contact-list-name contact-name
+			break;
+		case 5: // im contact-list-name contact-name
+			break;
+		case 6: // save file-name
+			break;
+	}  
+*/
     if (echoServAddr.sin_addr.s_addr != fromAddr.sin_addr.s_addr)
     {
         fprintf(stderr,"Error: received a packet from unknown source.\n");
         exit(1);
     }
-
-    /* null-terminate the received data */
-    echoBuffer[respStringLen] = '\0';
-    printf("Received: %s\n", echoBuffer);    /* Print the echoed arg */
-    
     close(sock);
     exit(0);
 }

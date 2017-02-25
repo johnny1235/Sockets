@@ -50,6 +50,16 @@ void printVector(vector<string> names)
 	}
 }
 
+vector<string> printToVector(vector<string> names)
+{
+	vector<string> printer;
+	for(vector<string>::iterator it = names.begin(); it !=names.end(); it++)
+	{
+		printer.push_back(*it);
+	}
+	return printer;
+
+}
 void printVectorTuple(vector<contact> names)
 {
 	for(vector<contact>::iterator it = names.begin(); it !=names.end(); it++)
@@ -58,27 +68,27 @@ void printVectorTuple(vector<contact> names)
 	}
 }
 // register contact-list-name
-int registerContactListName(list& contactList, string name)
+string registerContactListName(list& contactList, string name)
 {
 	vector<contact> empty;
 	for(list::iterator it = contactList.begin(); it !=contactList.end(); it++)
 	{
 		if(name == it->first)
 		{
-			cout << "FAILURE" << endl;
-			return 0;
+			//cout << "FAILURE" << endl;
+			return "FAILURE";
 		}
 	}
 	contactList.push_back(make_pair(name, empty));
-	cout << "SUCCESS"<< endl;
-	return 1;
+	//cout << "SUCCESS"<< endl;
+	return "SUCCESS";
 
 
 }
 
 // leave contact-list-name contact name
 
-int leave(list& contactList, string contactListName, string hostName)
+string leave(list& contactList, string contactListName, string hostName)
 {
 	
 	for(list::iterator it = contactList.begin(); it !=contactList.end(); it++)
@@ -87,24 +97,24 @@ int leave(list& contactList, string contactListName, string hostName)
 		{
 			if(it->second.size() == 0)
 			{
-				cout << "Failure" << endl;
-				return 0;
+				//cout << "Failure" << endl;
+				return "Failure";
 			}
 			for(int i =0; i <= it->second.size(); i++)
 			{
 				if(hostName == get<0>(*(it->second.begin()+i)))
 				{
 					it->second.erase(it->second.begin()+i);
-					cout << "SUCCESS" << endl;
-					return 1;
+					//cout << "SUCCESS" << endl;
+					return "SUCCESS";
 				}
 			}
-			cout << "Failure" << endl;
-			return 0;
+			//cout << "Failure" << endl;
+			return "Failure";
 		}
 	}
-	cout << "Failure" << endl;
-	return 0;
+	//cout << "Failure" << endl;
+	return "Failure";
 
 }
 
@@ -138,7 +148,7 @@ pair<int, vector<contact> > im(list contactList, string contactListName, string 
 
 }
 // join contact-list-name contact-name Ip address port
-int join(list& contactList, string listName, string hostName, string ip, int port)
+string join(list& contactList, string listName, string hostName, string ip, int port)
 {
 	for(list::iterator it = contactList.begin(); it !=contactList.end(); it++)
 	{
@@ -148,22 +158,22 @@ int join(list& contactList, string listName, string hostName, string ip, int por
 			{
 				if(hostName == get<0>(*it2))
 				{
-					cout << "FAILURE" << endl;// FAILURE
-					return 0;
+					//cout << "FAILURE" << endl;// FAILURE
+					return "FAILURE";
 				}
 			}
 			it->second.push_back(make_tuple(hostName,ip,port));
-			cout << "SUCCESS" << endl;
-			return 1;
+			//cout << "SUCCESS" << endl;
+			return "SUCCESS";
 		}
 		
 	}
-	cout << "FAILURE" << endl;
-	return 0;
+	//cout << "FAILURE" << endl;
+	return "FAILURE";
 
 } 
 
-int saveFile(list contactList, string Filename)
+string saveFile(list contactList, string Filename)
 {
 	ofstream myFile;
 	try
@@ -183,12 +193,12 @@ int saveFile(list contactList, string Filename)
 		}
 	
 		myFile.close();
-		return 1;
+		return "SUCCESSS";
 	}
 
 	catch(const char* e)
 	{
-		return 0;
+		return "FAILURE";
 	}
 }
 int main(int argc, char *argv[])
@@ -234,6 +244,7 @@ int main(int argc, char *argv[])
 	  
 	    for (;;) /* Run forever */
 	    {
+
 		/* Set the size of the in-out parameter */
 		cliAddrLen = sizeof(echoClntAddr);
 
@@ -246,55 +257,84 @@ int main(int argc, char *argv[])
 
 		// parsing the message from client
 		vector<string> tokenVector;
-		cout << echoBuffer << endl;
+		cout << "message from Cient: " << echoBuffer << endl;
 		istringstream iss(echoBuffer);
-		while(getline(iss, token, '-'))
+		while(getline(iss, token, '-'))  // "-" is the Delimiter --------------------------------------------
 		{
 			tokenVector.push_back(token);
 		}
 		
-		// printVector(tokenVector); Test
+		//printVector(tokenVector); //Test
 		int tokenInt = stoi(tokenVector.at(0),nullptr,10);
+		//cout << tokenInt <<endl;  //Test
 		switch(tokenInt)
 		{
 			case 1: // query list
 				{
 				pair<int, vector<string> > toReturn = query_lists(contactList);
-				//cout << toReturn.first << endl;
-				//printVector(toReturn.second);
+				string boss = to_string(toReturn.first); // Boss will be used to send to Client
+				vector<string> bobby = printToVector(toReturn.second); // bobby stores vector full of names
+				for(vector<string>::iterator it = bobby.begin(); it !=bobby.end(); it++) // appending everything from bobby(vector of names) to Boss
+				{
+					boss.append(",");  // comma used as a delimiter to send to Client, Client code will create new array with the delimiter
+					boss.append(*it);
+				}
+				const void * a = boss.c_str();   //formats boss to correct type
+				sendto(sock, a, 800, 0,(struct sockaddr *) &echoClntAddr, sizeof(echoClntAddr)); //send to client
 				break;
 				}
 			case 2: // register contact-list-name
-			
+				{
+				string boss = registerContactListName(contactList, tokenVector.at(1));  // creates string boss with success or failure from function
+				const void * a = boss.c_str();   //formats boss to correct type
+				sendto(sock, a, 800, 0,(struct sockaddr *) &echoClntAddr, sizeof(echoClntAddr)); //send boss to client
 				break;
+				}			
 	 		case 3: // join contact-list-name contact-name ip port
+				{
+				int port = stoi(tokenVector.at(4),nullptr,10);
+				string boss = join(contactList, tokenVector.at(1), tokenVector.at(2), tokenVector.at(3), port);
+				const void * a = boss.c_str();   //formats boss to correct type
+				sendto(sock, a, 800, 0,(struct sockaddr *) &echoClntAddr, sizeof(echoClntAddr)); //send boss to client
 				break;
+				}
 			case 4: // leave contact-list-name contact-name
+				{
+				string boss = leave(contactList, tokenVector.at(1), tokenVector.at(2));
+				const void * a = boss.c_str();   //formats boss to correct type
+				sendto(sock, a, 800, 0,(struct sockaddr *) &echoClntAddr, sizeof(echoClntAddr)); //send boss to client
 				break;
+				}
 			case 5: // im contact-list-name contact-name
+				{
+				cout<<"Hello world IM" << endl;
+				 // still working on this portion
 				break;
+				}
 			case 6: // save file-name
+				{
+				string boss = saveFile(contactList, tokenVector.at(1));
+				const void * a = boss.c_str();   //formats boss to correct type
+				sendto(sock, a, 800, 0,(struct sockaddr *) &echoClntAddr, sizeof(echoClntAddr)); //send boss to client
 				break;
+				}
 		}
-/// 		Test to Send Hello world to Client
-		boss = "Hello World";
-		const void * a = boss.c_str();
-		sendto(sock, a, 255, 0, 
-		     (struct sockaddr *) &echoClntAddr, sizeof(echoClntAddr));
-///             END TEST
+		tokenVector.clear(); // clear the vector for next message
+		memset(&echoBuffer[0], 0, sizeof(echoBuffer)); // clear the echo buffer for next message
+/*
 		sendto(sock, echoBuffer, recvMsgSize, 0, 
 		     (struct sockaddr *) &echoClntAddr, sizeof(echoClntAddr));
-/*
+*/
 		/* Send received datagram back to the client */
 		if (sendto(sock, echoBuffer, recvMsgSize, 0, 
 		     (struct sockaddr *) &echoClntAddr, sizeof(echoClntAddr)) != recvMsgSize)
 		    DieWithError("sendto() sent a different number of bytes than expected");
 	    }
 
-	//vector<contact> bobs;
+
 
 /*
-
+	//vector<contact> bobs;
 	// creating contact lists
 	contactList.push_back(make_pair("bob", bobs));
 	contactList.push_back(make_pair("alice", bobs));
