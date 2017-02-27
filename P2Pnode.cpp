@@ -178,7 +178,6 @@ int main(int argc, char *argv[])
     int respStringLen;               /* Length of received response */
     std::string input;
     int input_int;
-    bool flag = false;
 
     while(1)
     {
@@ -268,7 +267,6 @@ int main(int argc, char *argv[])
                    query += "-" + *it;
                 } 
  
-                flag = true;
                 break;
             }
             case 6: // save file-name
@@ -333,7 +331,7 @@ int main(int argc, char *argv[])
         fromSize = sizeof(fromAddr);
         respStringLen = recvfrom(sock, echoBuffer, ECHOMAX, 0, (struct sockaddr *) &fromAddr, &fromSize);   // edited to receive buffer -- Echomax set to bigger number
         echoBuffer[respStringLen] = '\0';       /* null-terminate the received data */
-        printf("Received: %s\n", echoBuffer);
+        printf("Received:\n%s\n\n", echoBuffer);
 
         if (echoServAddr.sin_addr.s_addr != fromAddr.sin_addr.s_addr)
         {
