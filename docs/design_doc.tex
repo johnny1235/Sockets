@@ -1,0 +1,190 @@
+%        File: main.tex
+%     Created: Sun Feb 26 07:00 PM 2017 M
+% Last Change: Sun Feb 26 07:00 PM 2017 M
+%
+\documentclass[letterpaper]{article}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{fancyvrb}
+
+\newenvironment{CVerbatim}
+ {\singlespacing\center\BVerbatim}
+ {\endBVerbatim\endcenter}
+
+% New definitions
+\algnewcommand\algorithmicswitch{\textbf{switch}}
+\algnewcommand\algorithmiccase{\textbf{case}}
+\algnewcommand\algorithmicassert{\texttt{assert}}
+\algnewcommand\Assert[1]{\State \algorithmicassert(#1)}%
+% New "environments"
+\algdef{SE}[SWITCH]{Switch}{EndSwitch}[1]{\algorithmicswitch\ #1\ \algorithmicdo}{\algorithmicend\ \algorithmicswitch}%
+\algdef{SE}[CASE]{Case}{EndCase}[1]{\algorithmiccase\ #1}{\algorithmicend\ \algorithmiccase}%
+\algtext*{EndSwitch}%
+\algtext*{EndCase}%
+
+\title{CSE434 Socket Programming Project: Design Document}
+\author{Kevin Liao and Kevin Van (Group 29)}
+
+\begin{document}
+\maketitle
+
+\section{Introduction}
+
+In this document, we describe the design of our peer-to-peer instant messaging application. This includes the data structures, formats of messages, and protocols used in our implementation.
+
+\section{Data Stuctures}
+
+We first go over the data structures used to store contact lists and contact information on our server. We entirely use common data structures from the C++ standard library, for simplicity and ease of extensibility.
+
+At the lowest level, we store individual contacts in 3-tuples of {\tt (contact-name, ip-address, port-number)}. We use a list (vector) {\tt contact-list} to combine 0 or more  contacts together. Then, since each {\tt contact-list} must also be associated with a name, we contain names and lists in pair {\tt (contact-list-name, contact-list)}. Finally, since there can be multiple contact lists, these pairs are all stored inside a list (vector) {\tt contact-lists-list}.
+
+More concretely, this was done using two templates (naming differs):
+
+contact-list-name\begin{CVerbatim}[fontsize=\small]
+typedef std::tuple<std::string,std::string,int> contact;
+typedef std::vector< std::pair< std::string,
+    std::vector<contact> > > list;
+\end{CVerbatim}
+
+\section{Message Formats}
+Here we explain how messages are passed between P2P nodes and the server, and between two P2P nodes.
+
+\subsection{Client-Server Messages}
+Clients can send queries to the server to perform a number of functions. These queries are formatted as follows
+
+\begin{center}
+{\tt <QUERY\_ID>-<ARG$_0$>-<ARG$_1$>-$\cdots$-<ARG$_n$>}
+\end{center}
+
+\noindent where each query is associated with a distinct {\tt <QUERY\_ID>}, and the arguments for each query are delimited by hypens. For example, a message passed for adding a contact might look like
+
+\begin{center}
+    {\tt3-alicelist-bob-127.0.0.1-9000}
+\end{center}
+
+Another form of message passing is from an input file to the server (i.e.\ to import a contact list). These are of the form
+
+\begin{CVerbatim}[fontsize=\small]
+Number of contact lists: 1
+
++mylist,3
+-kevin,127.0.0.1,8000
+-alice,127.0.0.1,8001
+-bob,127.0.0.1,8002
+\end{CVerbatim}
+
+\noindent The first line denotes the number of contact lists, although this is not necessary for importing a contact list. Lines beginning with {\tt +} denote the name of the contact list, followed by the number of contacts in the list. Lines beginning with {\tt -} denote the contact name, IP address, and port number. All fields are delimited by commas, and the parser ignores empty lines.
+
+\subsection{Peer-to-Peer Messages}
+
+When a P2P node sends an instant message, the message is forwarded using a cyclic overlay network. Messages between peers, as well as the initial message from the server to the node issuing the {\tt im} query are of the form
+
+\begin{CVerbatim}[fontsize=\small]
+<MESSAGE_CODE><MESSAGE>
+-<NAME_0>,<IP_ADDRESS_0>,<PORT_NUMBER_0>
+-<NAME_1>,<IP_ADDRESS_1>,<PORT_NUMBER_1>
+-<NAME_2>,<IP_ADDRESS_2>,<PORT_NUMBER_2>
+\end{CVerbatim}
+
+The field {\tt<MESSAGE\_CODE>} can be either 0 or 1. If 0, this means that the message is being sent from the server, and the requester should be prompted for a message to be sent. If 1, {\tt <MESSAGE>} should be set, and the recipient will forward the message to the next node on the list. This message will have the same contents, but with the next node's information removed. 
+
+For example, if $A$ receives a message with $B$, $C$, and $D$ in the forward queue, $A$ will
+forward the message to $B$, with $B$ removed from the queue. Since the original sender of the message must also receive the message at the end of the overlay network, the server adds the sender to the end of the queue upon receiving an {\tt im} query. Below is an example P2P message.
+
+\begin{CVerbatim}[fontsize=\small]
+1Hello there!
+-kevin,127.0.0.1,8000
+-alice,127.0.0.1,8001
+-bob,127.0.0.1,8002
+\end{CVerbatim}
+
+\section{Pseudocode}
+Here we include pseudocode for our contact server(contactServer.cpp) and P2P nodes (P2Pnode.cpp). It should be clear that the contact server is single-threaded, and the P2P nodes are multithreaded (one client thread, and one instant messaging thread).
+
+\subsection{Contact Server}
+Below is the pseudocode for the contact server.
+
+\begin{algorithmic}[1]
+    \Procedure{ContactServer}{}
+    \State{\text{Bind socket}}
+    \If{\text{input file}}
+    \State{\text{Parse input file and add contact lists}}
+    \EndIf{}
+    \While{(1)}
+    \State{\text{Block until received message}}
+    \State{\text{Parse message}}
+    \Switch{\text{query\_id}}
+    \Case{1}
+    \State{\textsc{QueryLists}()}
+    \State{Send reply to client}
+    \EndCase{}
+    \Case{2}
+    \State{\textsc{Register}(contact-list-name)}
+    \State{Send reply to client}
+    \EndCase{}
+    \Case{3}
+    \State{\textsc{Join}(contact-list-name, contact-name, IP-address, port)}
+    \State{Send reply to client}
+    \EndCase{}
+    \Case{4}
+    \State{\textsc{Leave}(contact-list-name, contact-name)}
+    \State{Send reply to client}
+    \EndCase{}
+    \Case{5}
+    \State{\textsc{IM}(contact-list-name, contact-name)}
+    \State{Send reply to client}
+    \EndCase{}
+    \Case{6}
+    \State{\textsc{Save}(file-name)}
+    \State{Send reply to client}
+    \If{contact list length $>$ 2}
+    \State{Forward message}
+    \EndIf{}
+    \EndCase{}
+\EndSwitch{}
+    \EndWhile{}
+    \EndProcedure{}
+\end{algorithmic}
+
+\subsection{P2P Node}
+
+Below is the pseudocode for a P2P node and its instant messaging thread. A mutex is used to give threads control of standard input.
+
+\begin{algorithmic}[1]
+    \Procedure{P2PNode}{}
+    \State{Initialize mutex}
+    \State{Create instant messaging thread}
+    \While{(1)}
+    \State{Prompt user for query selection}
+    \State{Parse input and send query to server}
+    \State{Unlock mutex}
+    \State{Time out for fraction of second}
+    \State{Lock mutex}
+    \State{Receive reply from server}
+    \EndWhile{}
+    \EndProcedure{}
+\end{algorithmic}
+
+\begin{algorithmic}[1]
+    \Procedure{IMThread}{} 
+    \State{Bind socket}
+    \While{(1)}
+    \State{Block until received message}
+    \If{only message header}
+    \State{Display message}
+    \ElsIf{message\_id == 0}
+    \State{Lock mutex}
+    \State{Prompt user for message}
+    \State{Unlock mutex}
+    \State{Remove next recipient from message queue}
+    \State{Forward message}
+    \Else{}
+    \State{Remove next recipient from message queue}
+    \State{Forward message}
+    \EndIf{}
+    \EndWhile{}
+    \EndProcedure{}
+\end{algorithmic}
+\end{document}
+
+

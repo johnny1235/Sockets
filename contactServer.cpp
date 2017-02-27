@@ -1,3 +1,8 @@
+/* CSE 434 Socket programming project
+ * Group: 29
+ * Team members: Kevin Liao, Kevin Van
+ */
+
 #include <vector>
 #include <utility>      // std::std::pair
 #include <iostream>
@@ -50,6 +55,7 @@ void printvector(std::vector<std::string> names)
 	}
 }
 
+// pretty print vector to string
 std::vector<std::string> printTovector(std::vector<std::string> names)
 {
 	std::vector<std::string> printer;
@@ -60,6 +66,8 @@ std::vector<std::string> printTovector(std::vector<std::string> names)
 	return printer;
 
 }
+
+// pretty print tuple to string
 std::string formatVectorTuple(std::vector<contact> names)
 {
     std::string to_return = "";
@@ -74,6 +82,7 @@ std::string formatVectorTuple(std::vector<contact> names)
     return to_return;
 }
 
+// format instant messaging p2p messages
 std::string format_im(std::vector<contact> names)
 {
     std::string to_return = "";
@@ -87,6 +96,7 @@ std::string format_im(std::vector<contact> names)
 	}
     return to_return;
 }
+
 // register contact-list-name
 std::string registerList(list &contactList, std::string name)
 {
@@ -187,6 +197,7 @@ std::string join(list& contactList, std::string listName, std::string hostName, 
 
 } 
 
+// save contact lists
 std::string saveFile(list contactList, std::string Filename)
 {
     std::ofstream myFile;
@@ -215,6 +226,7 @@ std::string saveFile(list contactList, std::string Filename)
 		return "FAILURE";
 	}
 }
+
 int main(int argc, char *argv[])
 {
     int sock;                        /* Socket */

@@ -1,3 +1,8 @@
+/* CSE 434 Socket programming project
+ * Group: 29
+ * Team members: Kevin Liao, Kevin Van
+ */
+
 #include <unistd.h>
 #include <iostream>
 #include <cstring>
@@ -112,7 +117,7 @@ void *im_socket(void *port)
             int stringLen = strlen(z);
             sendto(sock, z, stringLen, 0,(struct sockaddr *) &p2pAddr, sizeof(p2pAddr));
         }
-        else
+        else /* Forward message */
         {
             std::cout << "-----Received message: " << lines.at(0).substr(1) << "-----" << std::endl;
             std::string token2;
@@ -148,13 +153,15 @@ void *im_socket(void *port)
 
 int main(int argc, char *argv[])
 {
+    /* Initialize mutex */
 	if (pthread_mutex_init(&lock, NULL) != 0)
     {
         printf("\n mutex init failed\n");
 		exit(1);
     }
-    //sem_init( &mutex, 1, 1 );
     int local_port = atoi(argv[3]);
+
+    /* Create new thread */
     pthread_t im;
 	if(pthread_create(&im, NULL, im_socket, (void *) &local_port))
 	{
@@ -163,9 +170,10 @@ int main(int argc, char *argv[])
 	}
     if (argc != 4)    /* Test for correct number of arguments */
     {
-        fprintf(stderr,"Usage: %s <Server IP> <Server Port> <Local Port>\n", argv[0]);
+        fprintf(stderr,"Usage: %s <SERVER IP> <SERVER PORT> <LOCAL PORT>\n", argv[0]);
         exit(1);
     }
+
     int sock;                        /* Socket descriptor */
     struct sockaddr_in echoServAddr; /* Echo server address */
     struct sockaddr_in fromAddr;     /* Source address of echo */
@@ -181,6 +189,7 @@ int main(int argc, char *argv[])
 
     while(1)
     {
+        /* Text interface */
         printf("Please choose one of the following options (1-5):\n 1. query-lists\n 2. register \n 3. join\n 4. leave\n 5. im\n 6. save \n 7. exit\n");
 
         getline(std::cin, input);
@@ -323,6 +332,7 @@ int main(int argc, char *argv[])
                    &echoServAddr, sizeof(echoServAddr)) != echoStringLen)
             DieWithError("sendto() sent a different number of bytes than expected");
 
+        /* Give standard input to thread */
         pthread_mutex_unlock(&lock);
 		usleep(100000);
         pthread_mutex_lock(&lock);
