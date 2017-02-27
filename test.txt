@@ -1,0 +1,7 @@
+Number of contact lists: 1
+
++mylist,3
+-kevin,127.0.0.1,8000
+-lizzy,127.0.0.1,8001
+-poki,127.0.0.1,8002
+

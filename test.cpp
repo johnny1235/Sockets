@@ -1,3 +1,13 @@
+#include <vector>
+#include <utility>      // std::pair
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <tuple>
+#include <typeinfo>
+#include <algorithm> 
+#include <exception>
+
 #include <stdio.h>      /* for printf() and fprintf() */
 #include <sys/socket.h> /* for socket() and bind() */
 #include <arpa/inet.h>  /* for sockaddr_in and inet_ntoa() */
@@ -55,7 +65,9 @@ int main(int argc, char *argv[])
             (struct sockaddr *) &echoClntAddr, &cliAddrLen)) < 0)
             DieWithError("recvfrom() failed");
 
-        printf("Handling client %s\n", inet_ntoa(echoClntAddr.sin_addr));
+        printf("Server handling client %s\n", inet_ntoa(echoClntAddr.sin_addr));
+	echoBuffer[ recvMsgSize ] = '\0';
+        printf("Server receives %s\n", echoBuffer );
 
         /* Send received datagram back to the client */
         if (sendto(sock, echoBuffer, recvMsgSize, 0, 
