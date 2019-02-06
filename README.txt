@@ -1,5 +1,4 @@
-CSE 434 Socket programming project
-Group: 29
+Socket programming project
 Team members: Kevin Liao, Kevin Van
 
 1. To compile, run 'make'
