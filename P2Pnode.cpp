@@ -1,4 +1,4 @@
-/* CSE 434 Socket programming project
+/* Socket programming project
  * Group: 29
  * Team members: Kevin Liao, Kevin Van
  */
